@@ -1,87 +1,96 @@
-**`AiMarkmap`** 是一个零依赖、纯前端的单文件 HTML 应用。它利用大语言模型（LLM）的强大能力，将您的文本、想法或 Markdown 内容智能地转换成结构清晰、可交互的思维导图。尤其适合快速梳理新闻报道、分析文章结构或消化长篇内容，助您在海量信息中迅速抓住核心脉络。
+# AiMarkmap [中文](./README_cn.md)
+
+**`AiMarkmap`** is a zero-dependency, single-file HTML application. It leverages the powerful capabilities of large language models (LLMs) to intelligently transform your text, ideas, or Markdown content into clear and interactive mind maps. It is particularly suitable for quickly organizing news articles, analyzing article structures, or digesting lengthy content, helping you swiftly capture the core essence from a vast amount of information.
+
 ![AiMarkmap Screenshot](screenshot.png)
-> **关于本项目的一个有趣事实**：
-> 这个项目从最初的概念到最终的实现，超过 90% 的代码（包括 HTML, CSS, 和 JavaScript 逻辑）均由 AI（主要由 gemini-2.5-pro 和 claude-3-7-sonnet）编写、重构和迭代完成。
+> **An Interesting Fact About This Project**:
+> More than 90% of the code (including HTML, CSS, and JavaScript logic) for this project—from initial concept to final implementation—was written, rewritten, and iterated by AI (mainly using gemini-2.5-pro and claude-3-7-sonnet).
 
+## ✨ **Main Features**
 
-## ✨ 主要特性
+*   **🤖 Smart AI Generation**: Enter any topic or paste lengthy text; AI automatically extracts key information and generates structured mind maps for you.
+*   **🔄 Multi-Version Generation**: Adjust the slider to generate one to five different styles and structures of mind maps in a single operation, selecting the best option that suits your needs.
+*   **✍️ Real-time Markdown Preview**: Directly write or paste Markdown content and have it rendered into a mind map in real time. Additionally, AI-generated results can be edited and updated instantly.
+*   **🎨 Highly Customizable**:
+    *   **API Settings**: Connect to any API endpoint compatible with the OpenAI API format (including self-hosted models).
+    *   **Model Selection**: Automatically query and load available model lists; supports custom model names as well.
+    *   **Prompt Customization**: Through an independent settings panel, you have full control over prompts sent to AI to meet personalized needs.
+*   **🌐 Bilingual Interface**: Built-in Chinese-English language switching to accommodate different user preferences.
+*   **🖼️ Export as PNG**: Save the current mind map as a high-resolution PNG image with one click for easy sharing and storage.
+*   **⌨️ Keyboard Support**: Offers full-screen (`F11`), version switching (`←`/`→`), and save (`Ctrl+S`) shortcuts to enhance efficiency.
+*   **🐳 Easy Deployment**: Offers docker deployment options, allowing you to run it in a containerized environment with just a few commands.
 
-*   **🤖 AI 智能生成**：输入任意主题或粘贴大段文本，AI 将自动为您提炼关键信息并生成结构化的思维导图。
-*   **🔄多版本生成**：通过调节滑块，一次生成多个（1-5个）不同风格和结构的思维导图版本，供您挑选最佳方案。
-*   **✍️ Markdown 实时预览**：支持直接编写或粘贴 Markdown，并实时渲染为思维导图。同时，AI 生成的结果也支持编辑和即时更新。
-*   **🎨 高度可定制**：
-    *   **API 设置**：支持连接任何兼容 OpenAI API 格式的终端节点（包括自托管模型）。
-    *   **模型选择**：自动查询并加载可用模型列表，同时支持输入自定义模型名称。
-    *   **Prompt 自定义**：通过独立的设置面板，您可以完全掌控发送给 AI 的指令（Prompt），以满足个性化需求。
-*   **🌐 双语界面**：内置中英双语切换，满足不同用户的语言习惯。
-*   **🖼️ 导出为 PNG**：一键将当前思维导图导出为高清 PNG 图片，方便分享和保存。
-*   **⌨️ 快捷键支持**：提供全屏（`F11`）、切换版本（`←`/`→`）、保存（`Ctrl+S`）等快捷键，提升操作效率。
-*   **🔒 隐私安全**：所有配置（包括 API 密钥）均保存在您本地浏览器的 `localStorage` 中，不会上传至任何服务器。
-*   ** 部署方便 **：可以方便地部署为 docker 容器，方便随处访问。
+## 🚀 **Quick Start**
+### Use Directly in Browser
 
-## 🚀 快速开始
-### 直接浏览器打开使用
-*您可以直接在浏览器中打开 `AiMarkmap.html` 文件开始使用，无需安装或构建。*
-1.  **下载文件**：下载 `AiMarkmap.html` 文件。
-2.  **浏览器打开**：直接在您的现代浏览器（如 Chrome, Firefox, Edge）中打开该 HTML 文件。
-3.  **配置 API**：
-    *   点击界面右上角的 **`⚙️ API设置`** 按钮。
-    *   在 **API 地址** 输入框中，填入您的 AI 服务提供商提供的 API 地址（它会自动为您补全 `/chat/completions`）。例如：`https://api.openai.com/v1`。
-    *   在 **API 秘钥** 输入框中，填入您的 API Key。
-    *   点击 **`💾 保存并关闭`**。
-4.  **开始生成**：
-    *   在左侧输入框中输入您想生成导图的内容。
-    *   通过滑块选择希望生成的 **版本数量**。
-    *   点击 **`🚀 AI生成`** 按钮。
-5.  **浏览与导出**：
-    *   等待 AI 处理完成，右侧将展示生成的思维导图。
-    *   如果生成了多个版本，点击顶部的 **`版本 X`** 按钮进行切换。
-    *   点击 **`导出 PNG`** 按钮即可保存图片。
+1.  **Download File**:
+    Download the `AiMarkmap.html` file.
+2.  **Open in Browser**:
+    Open the HTML file directly in your modern browser (e.g., Chrome, Firefox, Edge).
+3.  **Configure API**:
+    *   Click the **`⚙️ API Settings`** button in the top right corner.
+    *   In the **API Address** input field, enter the API address provided by your AI service provider (the tool automatically appends `/chat/completions`). For example: `https://api.openai.com/v1`.
+    *   In the **API Key** input field, enter your API key.
+    *   Click **`💾 Save and Close`**.
+4.  **Start Generating**:
+    *   Enter the content you want to generate mind maps for in the left text box.
+    *   Use the slider to select the number of versions desired.
+    *   Click the **`🚀 AI Generate`** button.
+5.  **View and Export**:
+    *   Wait for AI processing to complete, after which the generated mind map will appear on the right.
+    *   If multiple versions are generated, click the top **`Version X`** button to switch between them.
+    *   Click the **`Export PNG`** button to save the image.
 
-### 容器部署
+### Container Deployment
 
-1. 打包为 docker 镜像：
+1. Build Docker Image:
+
 ```bash
 docker build -t ai-mindmap .
 ```
-2. 运行容器：
+
+2. Run Container:
+
 ```bash
-docker run -d -p 8080:80 --name ai-mindmap-container --restart unless-stopped ai-mindmap 
+docker run -d -p 8080:80 --name ai-mindmap-container --restart unless-stopped ai-mindmap
 ```
 
-打开浏览器，转到页面 `http://127.0.0.1:8080` 即可访问，其余配置与上等同。
+Open your browser and navigate to `http://127.0.0.1:8080` to access it, with the rest of the configuration remaining the same.
 
-## 🔧 配置详解
+## 🔧 **Configuration Details**
 
-### API 设置
-- **API 地址**: 必须是一个兼容 OpenAI `chat/completions` 接口的 URL。工具会自动处理末尾的路径。
-    > **提示**: 如果您还没有 API 密钥，可以前往 **[硅基流动 (SiliconFlow)](https://cloud.siliconflow.cn/i/9afjLTa)** 注册，他们为用户提供一些免费的AI模型。
-- **API 秘钥**: 您的服务凭证。点击旁边的 `👁️` 图标可以切换密钥的可见性。
+### API Settings
 
-### 模型与 Prompt
-- **模型选择**:
-    - 点击 **`🔍 查询`** 按钮可以从您的 API 地址自动获取可用的模型列表，并填充到下拉框中。
-    - 您也可以在下拉框中选择 `自定义`，并手动输入模型名称。
-- **Prompt 设置**:
-    - 点击 **`📝 Prompt设置`** 按钮打开 Prompt 编辑器。
-    - 您可以修改模板来指导 AI 的行为。请务必保留 `{{CONTENT}}` 占位符，它将被替换为您的输入内容。
+- **API Address**: Must be a URL compatible with OpenAI's `chat/completions` interface. The tool automatically handles the path suffix.
+    > **Hint**: If you do not have an API key yet, you can register at **[SiliconFlow (硅基流动)](https://cloud.siliconflow.cn/i/9afjLTa)** and they offer some free AI models.
+- **API Key**: Your service credentials. Click the adjacent `👁️` icon to toggle the visibility of your key.
 
-## ⌨️ 快捷键
+### Model & Prompt
 
-| 按键             | 功能                         |
-| ---------------- | ---------------------------- |
-| `F11`            | 切换/退出思维导图全屏显示    |
-| `Ctrl` + `S`     | 导出思维导图为 PNG 图片      |
-| `←` / `→`        | 在多个 AI 生成版本之间切换   |
+- **Model Selection**:
+    - Click the **`🔍 Query`** button to automatically fetch available model lists from your API address and populate them into the dropdown menu.
+    - You can also select `Custom` in the dropdown menu and manually input the model name.
+- **Prompt Settings**:
+    - Click the **`📝 Prompt Settings`** button to open the prompt editor.
+    - Modify the template to guide AI behavior. Ensure that you keep the `{{CONTENT}}` placeholder, which will be replaced with your input content.
 
-## 🛠️ 技术栈
+## ⌨️ **Keyboard Shortcuts**
 
-本项目完全基于原生 Web 技术构建，无任何外部框架依赖。
+| Key Combination              | Function                       |
+| ---------------------------- | ------------------------------- |
+| `F11`                        | Toggle/Exit Full-Screen View  |
+| `Ctrl + S`                   | Export Mind Map to PNG         |
+| `←` / `→`                    | Switch Between AI Generated Versions |
 
--   **核心逻辑**: Vanilla JavaScript (ES6+)
--   **思维导图渲染**: [Markmap](https://markmap.js.org/) (`markmap-lib` & `markmap-view`)
--   **SVG 渲染核心**: [D3.js](https://d3js.org/)
--   **图片导出**: [html2canvas](https://html2canvas.hertzen.com/)
+## 🛠️ **Technology Stack**
 
-## 📜 许可证
-本项目采用 [MIT License](./LICENSE) 开源。
+This project is entirely built using native web technologies with no external frameworks.
+
+-   **Core Logic**: Vanilla JavaScript (ES6+)
+-   **Mind Map Rendering**: [Markmap](https://markmap.js.org/) (`markmap-lib` & `markmap-view`)
+-   **SVG Rendering Core**: [D3.js](https://d3js.org/)
+-   **Image Export**: [html2canvas](https://html2canvas.hertzen.com/)
+
+## 📜 **License**
+
+This project is open source under the [MIT License](./LICENSE).
