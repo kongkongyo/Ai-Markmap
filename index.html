@@ -1155,15 +1155,38 @@ async function queryAvailableModels(isSilent = false) {
     if (!isSilent) { queryBtn.innerHTML = T('js_querying'); }
     
     try {
-        let modelsApiUrl = apiUrl.replace(/\/chat\/completions$/, '/models');
-        if (!modelsApiUrl.endsWith('/models')) {
-            const baseUrlMatch = apiUrl.match(/^(https?:\/\/.+?\/v\d+)/);
-            if (baseUrlMatch) { modelsApiUrl = `${baseUrlMatch[1]}/models`;
-            } else { throw new Error("无法从API地址推断出/models路径，请检查API地址格式。"); }
+        let modelsApiUrl;
+        
+        // 更健壮的URL构建逻辑，支持跨域API
+        try {
+            const url = new URL(apiUrl);
+            // 移除路径中的 /chat/completions
+            let pathname = url.pathname.replace(/\/chat\/completions\/?$/, '');
+            // 确保路径以 /models 结尾
+            if (!pathname.endsWith('/models')) {
+                pathname = pathname.replace(/\/$/, '') + '/models';
+            }
+            modelsApiUrl = url.origin + pathname;
+        } catch (urlError) {
+            // 如果URL解析失败，回退到字符串替换
+            modelsApiUrl = apiUrl.replace(/\/chat\/completions$/, '/models');
+            if (!modelsApiUrl.endsWith('/models')) {
+                const baseUrlMatch = apiUrl.match(/^(https?:\/\/[^\/]+(?:\/[^\/]+)*?\/v\d+)/);
+                if (baseUrlMatch) {
+                    modelsApiUrl = `${baseUrlMatch[1]}/models`;
+                } else {
+                    throw new Error("无法从API地址推断出/models路径，请检查API地址格式。");
+                }
+            }
         }
         
         const response = await fetch(modelsApiUrl, {
-            method: 'GET', headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' }
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            },
+            mode: 'cors'  // 明确指定CORS模式
         });
         
         if (!response.ok) { 
