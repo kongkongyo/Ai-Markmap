@@ -1552,12 +1552,37 @@ function downloadBlob(blob, fileName) {
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
-    
+
     document.body.appendChild(link);
     link.click();
-    
+
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+}
+
+function generateExportFileName(extension) {
+    // 获取中心主题（第一个 # 标题）
+    let topic = 'aimarkmap';
+    const lines = currentMarkdown.split('\n');
+    for (const line of lines) {
+        const match = line.match(/^#\s+(.+)/);
+        if (match) {
+            // 移除 emoji 和特殊字符，保留中英文和数字
+            topic = match[1].replace(/[^\w\u4e00-\u9fa5]/g, '').trim() || 'aimarkmap';
+            break;
+        }
+    }
+
+    // 格式化日期为 YYYYMMDDHHMMSS
+    const now = new Date();
+    const dateStr = now.getFullYear().toString() +
+        String(now.getMonth() + 1).padStart(2, '0') +
+        String(now.getDate()).padStart(2, '0') +
+        String(now.getHours()).padStart(2, '0') +
+        String(now.getMinutes()).padStart(2, '0') +
+        String(now.getSeconds()).padStart(2, '0');
+
+    return `${topic}_${dateStr}.${extension}`;
 }
 
 async function exportSVG() {
@@ -1583,7 +1608,7 @@ async function exportSVG() {
         }
 
         const svgBlob = new Blob([svgData.svgString], { type: 'image/svg+xml;charset=utf-8' });
-        downloadBlob(svgBlob, `aimarkmap-${Date.now()}.svg`);
+        downloadBlob(svgBlob, generateExportFileName('svg'));
 
     } catch (error) {
         console.error('导出SVG失败:', error);
@@ -1646,7 +1671,7 @@ async function exportPNG() {
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
 
         if (blob) {
-            downloadBlob(blob, `aimarkmap-${Date.now()}.png`);
+            downloadBlob(blob, generateExportFileName('png'));
         } else {
             throw new Error("Canvas toBlob failed.");
         }
