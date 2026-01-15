@@ -27,6 +27,11 @@
 *   **🖼️ Smart Export**:
     *   One-click export of the current mind map as a high-resolution PNG image or vector SVG file.
     *   **Smart File Naming**: Export filenames are automatically generated based on the mind map's central topic, formatted as `Topic_Timestamp.png/svg`, making management and retrieval easy.
+*   **📱 Mobile Support**:
+    *   Full support for mobile phones and tablets with responsive layout that adapts to different screen sizes.
+    *   Bottom tab bar design for quick switching between editor and mind map views.
+    *   Hamburger menu integrates settings access for convenient mobile operation.
+    *   Landscape mode support for larger mind map preview space.
 *   **⌨️ Keyboard Shortcuts**: Provides shortcuts for fullscreen, version switching, saving, quick generation, and more to enhance operational efficiency.
 *   **❓ Help & Information**: Built-in help button that displays detailed usage instructions, terms of service, and privacy policy when clicked.
 *   **🔒 Privacy & Security**: All configurations (including API keys) are stored in your local browser's `localStorage` and are never uploaded to any server.
@@ -35,8 +40,8 @@
 *You can open the `index.html` file directly in your browser to start using it—no installation or build required.*
 1.  **Download the File**: Download the `index.html` file.
 2.  **Open in Browser**:
-    *  Open the HTML file directly in your desktop browser (such as Chrome, Firefox, Edge).
-    *  Mobile devices are not currently supported.
+    *  **Desktop**: Open the HTML file directly in your browser (such as Chrome, Firefox, Edge).
+    *  **Mobile**: Open in your phone or tablet browser, and the interface will automatically adapt. Landscape mode provides a better mind map viewing experience.
 3.  **Configure API**:
     *   Click the **`⚙️ API Settings`** button in the upper left corner of the interface.
     *   In the **API URL** input field, enter the API root address provided by your AI service provider (e.g., `https://api.openai.com`). The tool will automatically complete the path to `/v1/chat/completions`.
@@ -92,6 +97,7 @@ This project is built entirely on native web technologies with no external frame
 ## 📝 Changelog
 
 ### Recent Updates
+- **Mobile Support**: Full support for mobile phones and tablets with responsive layout, bottom navigation bar, hamburger menu, and landscape preview mode
 - **Smart File Naming**: Exported SVG/PNG filenames are now automatically generated based on the mind map's central topic, formatted as `Topic_YYYYMMDDHHMMSS.extension`
 - **Cross-Origin Support Optimization**: Improved model API URL construction logic for better cross-origin request support
 - **Export Fix**: Fixed an issue where text might be incomplete when exporting SVG/PNG
