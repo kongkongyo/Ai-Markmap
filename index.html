@@ -2,12 +2,21 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>AI思维导图生成 - AiMarkmap</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23667eea'/%3E%3Cg stroke='white' stroke-width='6' stroke-linecap='round'%3E%3Cline x1='50' y1='50' x2='80' y2='25'/%3E%3Cline x1='50' y1='50' x2='25' y2='40'/%3E%3Cline x1='50' y1='50' x2='60' y2='80'/%3E%3C/g%3E%3Ccircle cx='50' cy='50' r='12' fill='white'/%3E%3Ccircle cx='80' cy='25' r='8' fill='white'/%3E%3Ccircle cx='25' cy='40' r='8' fill='white'/%3E%3Ccircle cx='60' cy='80' r='8' fill='white'/%3E%3Cpath d='M50 44L52 48 L56 50 L52 52 L50 56 L48 52 L44 50 L48 48 Z' fill='%23764ba2'/%3E%3C/svg%3E">
 <script src="https://unpkg.com/d3@7.8.5/dist/d3.min.js"></script>
 <script src="https://unpkg.com/markmap-lib@0.15.3/dist/browser/index.js"></script>
 <script src="https://unpkg.com/markmap-view@0.15.3/dist/browser/index.js"></script>
 <style>
+    /* CSS 变量定义 */
+    :root {
+        --header-height: 68px;
+        --mobile-header-height: 56px;
+        --tab-bar-height: 56px;
+        --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+        --touch-target-min: 44px;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; } body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; } 
     .header { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); padding: 0.5rem 2rem; border-bottom: 1px solid rgba(255, 255, 255, 0.2); display: flex; align-items: center; justify-content: space-between; } 
     .header h1 { color: white; font-size: 1.8rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; } .ai-badge { background: linear-gradient(45deg, #ff6b6b, #ffa500); padding: 0.3rem 0.8rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500; color: white; animation: pulse 2s infinite; } @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } } 
@@ -266,6 +275,509 @@
         color: #4c63d2;
         font-weight: 600;
     }
+
+    /* ========== 移动端汉堡菜单样式 ========== */
+    .hamburger-btn {
+        display: none;
+        flex-direction: column;
+        justify-content: space-around;
+        width: 28px;
+        height: 24px;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        padding: 0;
+        z-index: 1100;
+    }
+    .hamburger-btn span {
+        display: block;
+        width: 100%;
+        height: 3px;
+        background: white;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+    }
+    .hamburger-btn.active span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+    }
+    .hamburger-btn.active span:nth-child(2) {
+        opacity: 0;
+    }
+    .hamburger-btn.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(7px, -6px);
+    }
+    .mobile-menu {
+        display: none;
+        position: fixed;
+        top: var(--mobile-header-height);
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(10px);
+        padding: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 1050;
+        flex-direction: column;
+        gap: 0.75rem;
+        max-height: calc(100vh - var(--mobile-header-height));
+        overflow-y: auto;
+    }
+    .mobile-menu.show {
+        display: flex;
+    }
+    .mobile-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 8px;
+        color: #4c63d2;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+        width: 100%;
+        text-align: left;
+    }
+    .mobile-menu-item:hover {
+        background: rgba(102, 126, 234, 0.2);
+    }
+    .mobile-menu .lang-switcher {
+        display: flex;
+        gap: 0.5rem;
+        padding: 0.5rem 0;
+    }
+    .mobile-menu .lang-btn {
+        flex: 1;
+        background: rgba(102, 126, 234, 0.1);
+        color: #4c63d2;
+        border: 1px solid rgba(102, 126, 234, 0.3);
+    }
+    .mobile-menu .lang-btn.active {
+        background: #667eea;
+        color: white;
+    }
+
+    /* ========== 移动端底部标签栏样式 ========== */
+    .mobile-tab-bar {
+        display: none;
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: calc(var(--tab-bar-height) + var(--safe-area-bottom));
+        padding-bottom: var(--safe-area-bottom);
+        background: white;
+        border-top: 1px solid #e0e0e0;
+        z-index: 1000;
+        justify-content: space-around;
+        align-items: center;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    }
+    .mobile-tab-bar .tab-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        flex: 1;
+        height: 100%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        color: #666;
+        font-size: 0.75rem;
+        transition: all 0.2s;
+        padding: 8px 0;
+    }
+    .mobile-tab-bar .tab-btn svg {
+        width: 24px;
+        height: 24px;
+        transition: all 0.2s;
+    }
+    .mobile-tab-bar .tab-btn.active {
+        color: #667eea;
+    }
+    .mobile-tab-bar .tab-btn.active svg {
+        transform: scale(1.1);
+    }
+
+    /* ========== 响应式媒体查询 ========== */
+    /* 平板和大屏手机（768px - 1024px） */
+    @media (max-width: 1024px) {
+        .editor-panel {
+            width: 350px;
+        }
+    }
+
+    /* 移动端（768px 以下） */
+    @media (max-width: 768px) {
+        /* 头部导航栏 */
+        .header {
+            padding: 0.5rem 1rem;
+            height: var(--mobile-header-height);
+        }
+        .header h1 {
+            font-size: 1.3rem;
+        }
+        .header-right {
+            gap: 0.5rem;
+        }
+        /* 隐藏桌面端的头部右侧按钮 */
+        .header-right > #info-btn,
+        .header-right > .github-link,
+        .header-right > #lang-switcher {
+            display: none;
+        }
+        /* 显示汉堡菜单 */
+        .hamburger-btn {
+            display: flex;
+        }
+
+        /* 主容器 */
+        .container {
+            height: calc(100vh - var(--mobile-header-height) - var(--tab-bar-height) - var(--safe-area-bottom));
+            padding: 0;
+            gap: 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 面板布局 */
+        .editor-panel,
+        .mindmap-panel {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            transition: transform 0.3s ease, opacity 0.2s ease;
+        }
+        .editor-panel {
+            z-index: 2;
+        }
+        .mindmap-panel {
+            z-index: 1;
+        }
+        .editor-panel.hidden-mobile {
+            transform: translateX(-100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .mindmap-panel.hidden-mobile {
+            transform: translateX(100%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 显示底部标签栏 */
+        .mobile-tab-bar {
+            display: flex;
+        }
+
+        /* 面板内部调整 */
+        .panel-header {
+            padding: 0.4rem 0.75rem;
+        }
+        .panel-section {
+            padding: 0.3rem 0.75rem;
+        }
+        .input-section {
+            padding: 0.4rem 0.75rem;
+        }
+        /* 功能按钮紧凑布局 */
+        .button-row {
+            gap: 0.4rem;
+        }
+        .control-btn {
+            padding: 0.4rem 0.6rem;
+        }
+
+        /* 增大按钮触摸目标 */
+        .control-btn {
+            min-height: var(--touch-target-min);
+            font-size: 0.9rem;
+        }
+        .config-input,
+        .text-input,
+        .model-select,
+        select {
+            min-height: var(--touch-target-min);
+            font-size: 16px; /* 防止 iOS 自动缩放 */
+        }
+        .query-models-btn {
+            min-height: 38px;
+        }
+
+        /* 思维导图区域 */
+        .mindmap-header {
+            padding: 0.5rem 0.75rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .mindmap-header .panel-title {
+            font-size: 0.9rem;
+        }
+        .results-tabs {
+            order: 3;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .result-tab-btn {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+        .export-btn {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.85rem;
+            min-width: auto;
+        }
+        /* 移动端隐藏全屏按钮，已有横屏功能替代 */
+        #fullscreen-btn {
+            display: none;
+        }
+        .mindmap-container {
+            height: calc(100% - 80px);
+        }
+
+        /* 模态框响应式 */
+        .modal-content {
+            width: 95% !important;
+            max-width: none !important;
+            max-height: 90vh;
+            margin: 0 auto;
+        }
+        .modal-content .ai-config {
+            padding: 0.75rem 1rem 1rem 1rem;
+        }
+        .modal-content .panel-header {
+            padding: 0.75rem 1rem;
+        }
+        .modal-header h3,
+        .panel-title {
+            font-size: 1rem;
+        }
+        .config-row {
+            flex-wrap: wrap;
+        }
+        .config-label {
+            min-width: 100%;
+            margin-bottom: 0.25rem;
+        }
+        /* 版本控制行保持单行显示 */
+        .version-row {
+            flex-wrap: nowrap;
+        }
+        .version-row .config-label {
+            min-width: auto;
+            margin-bottom: 0;
+        }
+        #prompt-input {
+            height: 250px !important;
+        }
+        .info-modal-content {
+            padding: 0.75rem 1rem;
+        }
+        .info-modal-content h2 {
+            font-size: 1.2rem;
+        }
+        .info-modal-content h3 {
+            font-size: 1rem;
+        }
+    }
+
+    /* 小屏手机（480px 以下） */
+    @media (max-width: 480px) {
+        .header h1 {
+            font-size: 1.1rem;
+        }
+        .ai-badge {
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+        }
+        /* 功能按钮紧凑布局 */
+        .button-row {
+            gap: 0.25rem;
+        }
+        .control-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 0.3rem 0.3rem;
+            font-size: 0.8rem;
+            min-height: 38px;
+        }
+        .model-container {
+            flex-wrap: wrap;
+        }
+        .model-select {
+            width: 100%;
+        }
+        .query-models-btn {
+            flex: 1;
+            max-width: none;
+        }
+        .mindmap-header > div:last-child {
+            width: 100%;
+            justify-content: center;
+        }
+        .export-btn {
+            flex: 1;
+        }
+        /* 减小区域间距 */
+        .panel-section {
+            padding: 0.2rem 0.5rem;
+        }
+        .panel-header {
+            padding: 0.25rem 0.5rem;
+        }
+        .input-section {
+            padding: 0.25rem 0.5rem;
+        }
+    }
+
+    /* 横屏模式优化 */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .mobile-tab-bar {
+            height: calc(48px + var(--safe-area-bottom));
+        }
+        .mobile-tab-bar .tab-btn {
+            flex-direction: row;
+            gap: 8px;
+        }
+        .mobile-tab-bar .tab-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+        .container {
+            height: calc(100vh - var(--mobile-header-height) - 48px - var(--safe-area-bottom));
+        }
+    }
+
+    /* ========== 移动端横屏全屏模式 ========== */
+    .landscape-mode-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vh;
+        height: 100vw;
+        background: white;
+        z-index: 9999;
+        transform: rotate(90deg);
+        transform-origin: top left;
+        margin-left: 100vw;
+        overflow: hidden;
+    }
+    .landscape-mode-overlay.active {
+        display: flex;
+        flex-direction: column;
+    }
+    .landscape-mode-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        flex-shrink: 0;
+    }
+    .landscape-mode-header .title {
+        font-size: 1rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .landscape-mode-header .close-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .landscape-mode-header .close-btn:active {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    .landscape-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .landscape-export-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .landscape-export-btn:active {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    .landscape-tabs {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        flex: 1;
+        justify-content: center;
+        overflow-x: auto;
+        padding: 0 0.5rem;
+    }
+    .landscape-tab-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 0.4rem 0.8rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-weight: 500;
+        white-space: nowrap;
+        transition: all 0.2s;
+    }
+    .landscape-tab-btn:active {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    .landscape-tab-btn.active {
+        background: rgba(255, 255, 255, 0.4);
+        font-weight: 700;
+        border-color: white;
+    }
+    .landscape-mode-content {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        background: white;
+        width: 100%;
+        min-height: 0;
+    }
+    .landscape-mode-content svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+    }
+    /* 横屏按钮仅在导图面板显示时高亮 */
+    .mobile-tab-bar .landscape-btn {
+        opacity: 0.5;
+        pointer-events: none;
+    }
+    .mobile-tab-bar .landscape-btn.enabled {
+        opacity: 1;
+        pointer-events: auto;
+    }
 </style>
 </head>
 <body>
@@ -285,6 +797,12 @@
             <button data-lang="zh" class="lang-btn">中文</button>
             <button data-lang="en" class="lang-btn">EN</button>
         </div>
+        <!-- 移动端汉堡菜单按钮 -->
+        <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()">
+            <span></span>
+            <span></span>
+            <span></span>
+        </button>
     </div>
 </div>
 <div class="container">
@@ -307,15 +825,13 @@
                     <input type="text" id="custom-model-input" class="config-input hidden" data-t-placeholder="customModelInputPlaceholder">
                 </div>
             </div>
-        </div>
-        <div class="panel-section">
-            <div class="config-row">
+            <div class="config-row version-row">
                 <span class="config-label" data-t="versionsLabel"></span>
                 <input type="range" id="version-slider" min="1" max="5" value="3">
                 <span id="version-count-display">3</span>
             </div>
         </div>
-        <div class="panel-section">
+        <div class="panel-section action-buttons-section">
             <div class="button-row">
                 <button class="control-btn ai-btn" id="generate-btn" onclick="generateWithAI()" data-t="generateBtn"></button>
                 <button class="control-btn ai-btn" id="paste-generate-btn" onclick="pasteAndGenerate()" data-t="pasteGenerateBtn"></button>
@@ -352,6 +868,84 @@
                 <div class="status-message" id="status-message"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- 移动端弹出菜单 -->
+<div class="mobile-menu" id="mobile-menu">
+    <button class="mobile-menu-item" id="mobile-info-btn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+            <path d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z"></path>
+        </svg>
+        <span data-t="helpBtnTitle">帮助与信息</span>
+    </button>
+    <a href="https://github.com/kongkongyo/Ai-Markmap" target="_blank" rel="noopener noreferrer" class="mobile-menu-item">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" width="24" height="24"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span>GitHub</span>
+    </a>
+    <div class="lang-switcher" id="mobile-lang-switcher">
+        <button data-lang="zh" class="lang-btn">中文</button>
+        <button data-lang="en" class="lang-btn">EN</button>
+    </div>
+</div>
+
+<!-- 移动端底部标签栏 -->
+<div class="mobile-tab-bar" id="mobile-tab-bar">
+    <button class="tab-btn active" data-panel="editor" onclick="switchMobilePanel('editor')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        <span data-t="mobileTabEditor">编辑</span>
+    </button>
+    <button class="tab-btn" data-panel="mindmap" onclick="switchMobilePanel('mindmap')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <line x1="12" y1="2" x2="12" y2="6"></line>
+            <line x1="12" y1="18" x2="12" y2="22"></line>
+            <line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line>
+            <line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line>
+            <line x1="2" y1="12" x2="6" y2="12"></line>
+            <line x1="18" y1="12" x2="22" y2="12"></line>
+            <line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line>
+            <line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line>
+        </svg>
+        <span data-t="mobileTabMindmap">导图</span>
+    </button>
+    <button class="tab-btn landscape-btn" id="landscape-btn" onclick="toggleLandscapeMode()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+            <path d="M12 10v4"></path>
+            <path d="M10 12h4"></path>
+        </svg>
+        <span data-t="mobileTabLandscape">横屏</span>
+    </button>
+</div>
+
+<!-- 移动端横屏模式覆盖层 -->
+<div class="landscape-mode-overlay" id="landscape-overlay">
+    <div class="landscape-mode-header">
+        <div class="title">
+            <span data-t="mindmapPreviewTitle">思维导图预览</span>
+        </div>
+        <div class="landscape-tabs" id="landscape-tabs">
+            <!-- 版本标签将动态插入 -->
+        </div>
+        <div class="landscape-actions">
+            <button class="landscape-export-btn" onclick="exportLandscapeSVG()" data-t="exportSvgBtn">导出 SVG</button>
+            <button class="landscape-export-btn" onclick="exportLandscapePNG()" data-t="exportPngBtn">导出 PNG</button>
+            <button class="close-btn" onclick="closeLandscapeMode()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+                <span data-t="mobileCloseLandscape">退出横屏</span>
+            </button>
+        </div>
+    </div>
+    <div class="landscape-mode-content" id="landscape-content">
+        <!-- 思维导图将被复制到这里 -->
     </div>
 </div>
 
@@ -546,6 +1140,11 @@ const translations = {
         'js_alert_query_success': (n) => `成功获取到 ${n} 个可用模型！`,
         'js_alert_no_mindmap': '找不到思维导图，无法导出。',
         'js_alert_export_error': (type) => `导出${type}图片时发生错误，请稍后重试。`,
+
+        'mobileTabEditor': '编辑',
+        'mobileTabMindmap': '导图',
+        'mobileTabLandscape': '横屏',
+        'mobileCloseLandscape': '退出横屏',
         
         'defaultMarkdown': `# 🤖 AI思维导图生成 - AiMarkmap
 
@@ -736,6 +1335,11 @@ const translations = {
         'js_alert_query_success': (n) => `Successfully fetched ${n} available models!`,
         'js_alert_no_mindmap': 'Could not find the mind map to export.',
         'js_alert_export_error': (type) => `An error occurred while exporting the ${type} image. Please try again later.`,
+
+        'mobileTabEditor': 'Edit',
+        'mobileTabMindmap': 'Map',
+        'mobileTabLandscape': 'Rotate',
+        'mobileCloseLandscape': 'Exit',
         
         'defaultMarkdown': `# 🤖 AI Mind Map Generation - AiMarkmap
 
@@ -828,6 +1432,11 @@ function setLanguage(lang) {
     }
 
     document.querySelectorAll('#lang-switcher .lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang);
+    });
+
+    // 同步更新移动端语言按钮
+    document.querySelectorAll('#mobile-lang-switcher .lang-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.lang === lang);
     });
 
@@ -1034,6 +1643,26 @@ async function init() {
         handleModelChange();
         clearContent();
         updateVersionCountDisplay();
+
+        // 移动端初始化
+        initMobileLayout();
+
+        // 移动端菜单事件监听
+        document.getElementById('mobile-info-btn').addEventListener('click', () => {
+            closeMobileMenu();
+            openInfoModal();
+        });
+
+        document.getElementById('mobile-lang-switcher').addEventListener('click', (e) => {
+            if (e.target.matches('.lang-btn')) {
+                const lang = e.target.dataset.lang;
+                setLanguage(lang);
+                // 同步更新移动端语言按钮状态
+                document.querySelectorAll('#mobile-lang-switcher .lang-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.lang === lang);
+                });
+            }
+        });
 
     } catch (error) {
         console.error('初始化失败:', error);
@@ -1305,6 +1934,12 @@ async function generateWithAI() {
             renderResultTabs();
             switchToResult(0);
             switchView('markdown');
+
+            // 移动端自动跳转到导图面板
+            if (window.innerWidth <= 768) {
+                switchMobilePanel('mindmap');
+            }
+
             setTimeout(() => { loadingOverlay.style.display = 'none'; }, 1000);
         } else {
             throw new Error(T('js_alert_all_failed'));
@@ -1874,6 +2509,12 @@ function setupNodeInteraction() {
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+        // 优先处理横屏模式
+        if (isLandscapeMode) {
+            e.preventDefault();
+            closeLandscapeMode();
+            return;
+        }
         if (!editNodeModal.classList.contains('hidden')) {
              e.preventDefault();
              closeEditModal();
@@ -1922,6 +2563,472 @@ document.addEventListener('keydown', (e) => {
                  e.preventDefault();
                  generateWithAI();
             }
+        }
+    }
+});
+
+// ========== 移动端功能 ==========
+let currentMobilePanel = 'editor';
+let isMobileMenuOpen = false;
+
+// 触摸手势管理器
+const touchGestures = {
+    startDistance: 0,
+    startScale: 1,
+    lastTapTime: 0,
+    isPinching: false,
+    startX: 0,
+    startY: 0,
+    currentTransform: { x: 0, y: 0, scale: 1 },
+    svgGroup: null,
+
+    init(container) {
+        const svg = container.querySelector('svg');
+        if (!svg) return;
+
+        this.svgGroup = svg.querySelector('g');
+
+        container.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+        container.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+        container.addEventListener('touchend', this.onTouchEnd.bind(this));
+    },
+
+    onTouchStart(e) {
+        if (e.touches.length === 2) {
+            // 双指捏合开始
+            this.isPinching = true;
+            this.startDistance = this.getDistance(e.touches);
+            this.startScale = this.currentTransform.scale;
+            e.preventDefault();
+        } else if (e.touches.length === 1) {
+            this.startX = e.touches[0].clientX;
+            this.startY = e.touches[0].clientY;
+        }
+    },
+
+    onTouchMove(e) {
+        if (e.touches.length === 2 && this.isPinching) {
+            e.preventDefault();
+            const currentDistance = this.getDistance(e.touches);
+            const scale = Math.min(Math.max(this.startScale * (currentDistance / this.startDistance), 0.5), 3);
+            this.currentTransform.scale = scale;
+            this.applyTransform();
+        }
+    },
+
+    onTouchEnd(e) {
+        if (this.isPinching) {
+            this.isPinching = false;
+            return;
+        }
+
+        // 双击检测
+        const now = Date.now();
+        if (now - this.lastTapTime < 300 && e.changedTouches.length === 1) {
+            // 双击重置视图
+            this.currentTransform = { x: 0, y: 0, scale: 1 };
+            if (mm) {
+                mm.fit();
+            }
+        }
+        this.lastTapTime = now;
+    },
+
+    getDistance(touches) {
+        const dx = touches[0].clientX - touches[1].clientX;
+        const dy = touches[0].clientY - touches[1].clientY;
+        return Math.sqrt(dx * dx + dy * dy);
+    },
+
+    applyTransform() {
+        if (this.svgGroup && mm) {
+            // 使用 d3 来应用缩放
+            const svg = d3.select('#mindmap');
+            svg.transition().duration(0).call(
+                d3.zoom().transform,
+                d3.zoomIdentity.scale(this.currentTransform.scale)
+            );
+        }
+    }
+};
+
+// 切换移动端面板
+function switchMobilePanel(panelName) {
+    if (window.innerWidth > 768) return;
+
+    const editorPanel = document.querySelector('.editor-panel');
+    const mindmapPanel = document.querySelector('.mindmap-panel');
+    const tabs = document.querySelectorAll('.mobile-tab-bar .tab-btn');
+
+    currentMobilePanel = panelName;
+
+    if (panelName === 'editor') {
+        editorPanel.classList.remove('hidden-mobile');
+        mindmapPanel.classList.add('hidden-mobile');
+    } else {
+        editorPanel.classList.add('hidden-mobile');
+        mindmapPanel.classList.remove('hidden-mobile');
+        // 切换到导图时重新适配
+        setTimeout(() => {
+            if (mm) mm.fit();
+        }, 350);
+    }
+
+    tabs.forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.panel === panelName);
+    });
+
+    // 更新横屏按钮状态
+    updateLandscapeBtn();
+}
+
+// 切换移动端菜单
+function toggleMobileMenu() {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+
+    isMobileMenuOpen = !isMobileMenuOpen;
+
+    if (isMobileMenuOpen) {
+        mobileMenu.classList.add('show');
+        hamburgerBtn.classList.add('active');
+    } else {
+        mobileMenu.classList.remove('show');
+        hamburgerBtn.classList.remove('active');
+    }
+}
+
+// 关闭移动端菜单
+function closeMobileMenu() {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+
+    isMobileMenuOpen = false;
+    mobileMenu.classList.remove('show');
+    hamburgerBtn.classList.remove('active');
+}
+
+// ========== 横屏模式功能 ==========
+let isLandscapeMode = false;
+
+// 切换横屏模式
+function toggleLandscapeMode() {
+    if (window.innerWidth > 768) return;
+    if (currentMobilePanel !== 'mindmap') return;
+
+    const overlay = document.getElementById('landscape-overlay');
+    const content = document.getElementById('landscape-content');
+
+    if (!isLandscapeMode) {
+        // 进入横屏模式
+        isLandscapeMode = true;
+        overlay.classList.add('active');
+
+        // 锁定页面滚动
+        document.body.style.overflow = 'hidden';
+
+        // 渲染版本标签
+        renderLandscapeTabs();
+
+        // 克隆原有的 SVG 到横屏容器
+        const originalSvg = document.querySelector('#mindmap');
+        if (originalSvg) {
+            const clonedSvg = originalSvg.cloneNode(true);
+            clonedSvg.id = 'landscape-mindmap';
+            clonedSvg.style.cssText = 'width:100%;height:100%;display:block;';
+            content.innerHTML = '';
+            content.appendChild(clonedSvg);
+
+            // 获取内容边界并居中
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    centerLandscapeMindmap();
+                }, 100);
+            });
+        }
+
+        // 更新按钮状态
+        updateLandscapeBtn();
+    } else {
+        closeLandscapeMode();
+    }
+}
+
+// 渲染横屏模式版本标签
+function renderLandscapeTabs() {
+    const tabsContainer = document.getElementById('landscape-tabs');
+    tabsContainer.innerHTML = '';
+
+    if (aiResults.length > 1) {
+        aiResults.forEach((_, index) => {
+            const tab = document.createElement('button');
+            tab.className = 'landscape-tab-btn' + (index === activeResultIndex ? ' active' : '');
+            tab.textContent = T('js_tab_version', index);
+            tab.dataset.index = index;
+            tab.onclick = () => switchLandscapeVersion(index);
+            tabsContainer.appendChild(tab);
+        });
+    }
+}
+
+// 横屏模式切换版本
+function switchLandscapeVersion(index) {
+    if (index < 0 || index >= aiResults.length) return;
+
+    // 更新主界面的版本
+    activeResultIndex = index;
+    const result = aiResults[index];
+    currentMarkdown = result.markdown;
+    mm.setData(result.root);
+
+    // 更新主界面标签状态
+    document.querySelectorAll('.result-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.index) === index);
+    });
+
+    // 更新横屏内容显示
+    if (currentViewMode === 'markdown') {
+        contentDisplay.value = currentMarkdown;
+    }
+
+    // 重新克隆 SVG 到横屏容器
+    const content = document.getElementById('landscape-content');
+    const originalSvg = document.querySelector('#mindmap');
+    if (originalSvg) {
+        // 等待主界面更新完成
+        setTimeout(() => {
+            const clonedSvg = originalSvg.cloneNode(true);
+            clonedSvg.id = 'landscape-mindmap';
+            clonedSvg.style.cssText = 'width:100%;height:100%;display:block;';
+            content.innerHTML = '';
+            content.appendChild(clonedSvg);
+
+            // 居中显示
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    centerLandscapeMindmap();
+                }, 100);
+            });
+        }, 100);
+    }
+
+    // 更新横屏标签状态
+    document.querySelectorAll('.landscape-tab-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.index) === index);
+    });
+}
+
+// 居中横屏模式的思维导图
+function centerLandscapeMindmap() {
+    const svg = document.querySelector('#landscape-mindmap');
+    if (!svg) return;
+
+    const g = svg.querySelector('g');
+    if (!g) return;
+
+    // 获取内容的实际边界
+    const bbox = g.getBBox();
+    const containerWidth = svg.clientWidth;
+    const containerHeight = svg.clientHeight;
+
+    if (bbox.width === 0 || bbox.height === 0) return;
+
+    // 计算缩放比例，留出边距
+    const padding = 40;
+    const scaleX = (containerWidth - padding * 2) / bbox.width;
+    const scaleY = (containerHeight - padding * 2) / bbox.height;
+    const scale = Math.min(scaleX, scaleY, 1.5); // 最大缩放 1.5 倍
+
+    // 计算居中位置
+    const centerX = containerWidth / 2;
+    const centerY = containerHeight / 2;
+    const contentCenterX = bbox.x + bbox.width / 2;
+    const contentCenterY = bbox.y + bbox.height / 2;
+
+    const translateX = centerX - contentCenterX * scale;
+    const translateY = centerY - contentCenterY * scale;
+
+    // 应用变换
+    g.setAttribute('transform', `translate(${translateX}, ${translateY}) scale(${scale})`);
+}
+
+// 关闭横屏模式
+function closeLandscapeMode() {
+    const overlay = document.getElementById('landscape-overlay');
+    const content = document.getElementById('landscape-content');
+
+    isLandscapeMode = false;
+    overlay.classList.remove('active');
+
+    // 恢复页面滚动
+    document.body.style.overflow = '';
+
+    // 清理横屏模式的内容
+    content.innerHTML = '';
+
+    // 更新按钮状态
+    updateLandscapeBtn();
+}
+
+// 横屏模式导出 SVG
+async function exportLandscapeSVG() {
+    const landscapeSvg = document.querySelector('#landscape-mindmap');
+    if (!landscapeSvg) {
+        alert(T('js_alert_no_mindmap'));
+        return;
+    }
+
+    try {
+        const svgData = createExportableSvg(landscapeSvg);
+        if (!svgData) {
+            throw new Error(T('js_alert_no_mindmap'));
+        }
+
+        const svgBlob = new Blob([svgData.svgString], { type: 'image/svg+xml;charset=utf-8' });
+        downloadBlob(svgBlob, generateExportFileName('svg'));
+    } catch (error) {
+        console.error('横屏导出SVG失败:', error);
+        alert(T('js_alert_export_error', 'SVG'));
+    }
+}
+
+// 横屏模式导出 PNG
+async function exportLandscapePNG() {
+    const landscapeSvg = document.querySelector('#landscape-mindmap');
+    if (!landscapeSvg) {
+        alert(T('js_alert_no_mindmap'));
+        return;
+    }
+
+    try {
+        const svgData = createExportableSvg(landscapeSvg);
+        if (!svgData) {
+            throw new Error(T('js_alert_no_mindmap'));
+        }
+
+        const margin = 20;
+        const scale = 3;
+        const canvas = document.createElement('canvas');
+        canvas.width = (svgData.width + margin * 2) * scale;
+        canvas.height = (svgData.height + margin * 2) * scale;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('无法获取Canvas上下文');
+
+        ctx.imageSmoothingEnabled = false;
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        const dataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData.svgString)));
+
+        const img = await new Promise((resolve, reject) => {
+            const image = new Image();
+            image.onload = () => resolve(image);
+            image.onerror = (err) => reject(new Error('Failed to load SVG as image. ' + err));
+            image.src = dataUrl;
+        });
+
+        if (img.decode) await img.decode();
+
+        ctx.drawImage(img, margin * scale, margin * scale, svgData.width * scale, svgData.height * scale);
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+        if (blob) {
+            downloadBlob(blob, generateExportFileName('png'));
+        } else {
+            throw new Error("Canvas toBlob failed.");
+        }
+    } catch (error) {
+        console.error('横屏导出PNG失败:', error);
+        alert(T('js_alert_export_error', 'PNG'));
+    }
+}
+
+// 更新横屏按钮状态
+function updateLandscapeBtn() {
+    const landscapeBtn = document.getElementById('landscape-btn');
+    if (!landscapeBtn) return;
+
+    const isMobile = window.innerWidth <= 768;
+    const isMindmapVisible = currentMobilePanel === 'mindmap';
+
+    if (isMobile && isMindmapVisible) {
+        landscapeBtn.classList.add('enabled');
+    } else {
+        landscapeBtn.classList.remove('enabled');
+    }
+}
+
+// 初始化移动端布局
+function initMobileLayout() {
+    const isMobile = window.innerWidth <= 768;
+    const editorPanel = document.querySelector('.editor-panel');
+    const mindmapPanel = document.querySelector('.mindmap-panel');
+
+    if (isMobile) {
+        // 初始化时显示编辑面板
+        if (currentMobilePanel === 'editor') {
+            editorPanel.classList.remove('hidden-mobile');
+            mindmapPanel.classList.add('hidden-mobile');
+        } else {
+            editorPanel.classList.add('hidden-mobile');
+            mindmapPanel.classList.remove('hidden-mobile');
+        }
+
+        // 初始化触摸手势
+        const mindmapContainer = document.querySelector('.mindmap-container');
+        if (mindmapContainer) {
+            touchGestures.init(mindmapContainer);
+        }
+    } else {
+        // 桌面端移除移动端类
+        editorPanel.classList.remove('hidden-mobile');
+        mindmapPanel.classList.remove('hidden-mobile');
+        closeMobileMenu();
+    }
+
+    // 更新标签栏状态
+    document.querySelectorAll('.mobile-tab-bar .tab-btn').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.panel === currentMobilePanel);
+    });
+
+    // 更新横屏按钮状态
+    updateLandscapeBtn();
+}
+
+// 防抖函数（用于 resize）
+function debounceResize(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// 监听窗口大小变化
+window.addEventListener('resize', debounceResize(() => {
+    // 如果切换到桌面端，关闭横屏模式
+    if (window.innerWidth > 768 && isLandscapeMode) {
+        closeLandscapeMode();
+    }
+    initMobileLayout();
+    if (mm) {
+        setTimeout(() => mm.fit(), 100);
+    }
+}, 200));
+
+// 点击页面其他地方关闭移动端菜单
+document.addEventListener('click', (e) => {
+    if (isMobileMenuOpen) {
+        const mobileMenu = document.getElementById('mobile-menu');
+        const hamburgerBtn = document.getElementById('hamburger-btn');
+        if (!mobileMenu.contains(e.target) && !hamburgerBtn.contains(e.target)) {
+            closeMobileMenu();
         }
     }
 });
