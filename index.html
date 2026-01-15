@@ -569,11 +569,13 @@
             min-width: 100%;
             margin-bottom: 0.25rem;
         }
-        /* 版本控制行保持单行显示 */
-        .version-row {
+        /* 版本控制行和模型行保持单行显示 */
+        .version-row,
+        .model-row {
             flex-wrap: nowrap;
         }
-        .version-row .config-label {
+        .version-row .config-label,
+        .model-row .config-label {
             min-width: auto;
             margin-bottom: 0;
         }
@@ -612,14 +614,16 @@
             min-height: 38px;
         }
         .model-container {
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         .model-select {
-            width: 100%;
+            flex: 1;
+            min-width: 0;
+            height: 32px;
+            min-height: 32px;
         }
         .query-models-btn {
-            flex: 1;
-            max-width: none;
+            flex: 0 0 auto;
         }
         .mindmap-header > div:last-child {
             width: 100%;
@@ -630,7 +634,19 @@
         }
         /* 减小区域间距 */
         .panel-section {
-            padding: 0.2rem 0.5rem;
+            padding: 0.4rem 0.5rem;
+        }
+        /* 模型行和版本行间距 */
+        .model-row {
+            margin-bottom: 0.5rem;
+        }
+        .version-row {
+            margin-top: 0.3rem;
+        }
+        /* 按钮区域增加上下间距 */
+        .action-buttons-section {
+            padding: 0.6rem 0.5rem;
+            margin: 0.4rem 0;
         }
         .panel-header {
             padding: 0.25rem 0.5rem;
@@ -812,8 +828,8 @@
             <button class="control-btn" id="settings-btn" onclick="openSettingsModal()" data-t="apiSettingsBtn"></button>
         </div>
         <div class="panel-section">
-             <div class="config-row">
-                <span class="config-label" data-t="modelLabel"></span>
+             <div class="config-row model-row">
+                <span class="config-label" id="model-label" data-t="modelLabel"></span>
                 <div class="model-input-wrapper">
                     <div class="model-container">
                         <select id="model-select" class="model-select">
@@ -1037,6 +1053,7 @@ const translations = {
         'promptSettingsBtn': '📝 Prompt设置',
         'apiSettingsBtn': '⚙️ API设置',
         'modelLabel': '模型:',
+        'modelLabelMobile': '模型选择:',
         'queryBtn': '🔍 查询',
         'versionsLabel': '版本数量:',
         'generateBtn': '🚀 AI生成',
@@ -1232,6 +1249,7 @@ const translations = {
         'promptSettingsBtn': '📝 Prompt Settings',
         'apiSettingsBtn': '⚙️ API Settings',
         'modelLabel': 'Model:',
+        'modelLabelMobile': 'Model Select:',
         'queryBtn': '🔍 Query',
         'versionsLabel': 'Versions:',
         'generateBtn': '🚀 AI Generate',
@@ -1425,7 +1443,13 @@ function setLanguage(lang) {
         const key = el.dataset.tTitle;
         if (t[key]) el.title = t[key];
     });
-    
+
+    // 移动端模型标签使用不同文本
+    const modelLabel = document.getElementById('model-label');
+    if (modelLabel && window.innerWidth <= 768 && t['modelLabelMobile']) {
+        modelLabel.innerHTML = t['modelLabelMobile'];
+    }
+
     const infoModalContent = document.querySelector('#info-modal .info-modal-content');
     if (infoModalContent && t['infoModalContentHtml']) {
         infoModalContent.innerHTML = t['infoModalContentHtml'];
@@ -3017,10 +3041,20 @@ window.addEventListener('resize', debounceResize(() => {
         closeLandscapeMode();
     }
     initMobileLayout();
+    // 更新模型标签文本
+    updateModelLabel();
     if (mm) {
         setTimeout(() => mm.fit(), 100);
     }
 }, 200));
+
+function updateModelLabel() {
+    const modelLabel = document.getElementById('model-label');
+    const t = translations[currentLanguage];
+    if (modelLabel && t) {
+        modelLabel.innerHTML = window.innerWidth <= 768 ? t['modelLabelMobile'] : t['modelLabel'];
+    }
+}
 
 // 点击页面其他地方关闭移动端菜单
 document.addEventListener('click', (e) => {
