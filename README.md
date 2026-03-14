@@ -103,5 +103,15 @@
 - **导出修复**：修复了导出 SVG/PNG 时文本可能不完整的问题
 - **帮助系统**：新增帮助按钮，点击可查看使用说明、服务条款和隐私政策
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=kongkongyo%2FAi-Markmap&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&legend=top-left" />
+ </picture>
+</a>
+
 ## 📜 许可证
 本项目采用 [MIT License](./LICENSE) 开源。

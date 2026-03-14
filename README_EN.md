@@ -103,5 +103,16 @@ This project is built entirely on native web technologies with no external frame
 - **Export Fix**: Fixed an issue where text might be incomplete when exporting SVG/PNG
 - **Help System**: Added a help button that displays usage instructions, terms of service, and privacy policy when clicked
 
+## Star History
+
+<a href="https://www.star-history.com/?repos=kongkongyo%2FAi-Markmap&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=kongkongyo/Ai-Markmap&type=date&legend=top-left" />
+ </picture>
+</a>
+
+
 ## 📜 License
 This project is open-sourced under the [MIT License](./LICENSE).
