@@ -973,6 +973,13 @@
         </div>
         <div class="ai-config">
             <div class="config-row">
+                <span class="config-label" data-t="apiTypeLabel"></span>
+                <select id="api-type" class="config-input" style="cursor:pointer;">
+                    <option value="chat" selected>/v1/chat/completions</option>
+                    <option value="responses">/v1/responses</option>
+                </select>
+            </div>
+            <div class="config-row">
                 <span class="config-label" data-t="apiUrlLabel"></span>
                 <input type="text" id="api-url" class="config-input" data-t-placeholder="apiUrlPlaceholder" />
             </div>
@@ -1068,6 +1075,7 @@ const translations = {
         'thinkingMessage': 'AI正在思考中...',
         'apiSettingsTitle': '⚙️ API 设置',
         'apiUrlLabel': 'API地址:',
+        'apiTypeLabel': 'API类型:',
         'apiKeyLabel': 'API秘钥:',
         'saveAndCloseBtn': '💾 保存并关闭',
         'promptSettingsTitle': '📝 Prompt 设置',
@@ -1264,6 +1272,7 @@ const translations = {
         'thinkingMessage': 'AI is thinking...',
         'apiSettingsTitle': '⚙️ API Settings',
         'apiUrlLabel': 'API URL:',
+        'apiTypeLabel': 'API Type:',
         'apiKeyLabel': 'API Key:',
         'saveAndCloseBtn': '💾 Save & Close',
         'promptSettingsTitle': '📝 Prompt Settings',
@@ -1608,6 +1617,11 @@ async function init() {
             document.getElementById(id).addEventListener('input', saveConfig);
         });
 
+        document.getElementById('api-type').addEventListener('change', () => {
+            autoCompleteApiUrl();
+            saveConfig();
+        });
+
         contentDisplay.addEventListener('input', handleDisplayEdit);
         topicInput.addEventListener('focus', () => switchView('input'));
         
@@ -1696,21 +1710,56 @@ async function init() {
 
 function autoCompleteApiUrl() {
     const input = document.getElementById('api-url');
+    const apiType = document.getElementById('api-type').value;
+    const suffix = apiType === 'responses' ? '/responses' : '/chat/completions';
     let url = input.value.trim();
-    if (!url || url.includes('/chat/completions')) { return; }
-    url = url.replace(/\/+$/, '');
-    let correctedUrl;
-    if (url.endsWith('/v1')) {
-        correctedUrl = url + '/chat/completions';
+    if (!url) { return; }
+    // 已包含后缀的，直接替换
+    if (url.includes('/chat/completions') || url.includes('/responses')) {
+        url = url.replace(/\/(chat\/completions|responses)$/, suffix);
     } else {
-        correctedUrl = url + '/v1/chat/completions';
+        url = url.replace(/\/+$/, '');
+        if (url.endsWith('/v1')) {
+            url = url + suffix.replace('/v1', '');
+        } else {
+            url = url + '/v1' + suffix.replace('/v1', '');
+        }
     }
-    input.value = correctedUrl;
+    input.value = url;
+}
+
+function getApiType() {
+    return document.getElementById('api-type').value;
+}
+
+function buildRequestBody(apiType, model, content, temperature) {
+    if (apiType === 'responses') {
+        return {
+            model: model,
+            input: [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }],
+            max_output_tokens: 2000,
+            temperature: temperature
+        };
+    }
+    return {
+        model: model,
+        messages: [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }],
+        max_tokens: 2000,
+        temperature: temperature
+    };
+}
+
+function parseApiResponse(apiType, data) {
+    if (apiType === 'responses') {
+        return data.output?.[0]?.content?.[0]?.text;
+    }
+    return data.choices?.[0]?.message?.content;
 }
 
 function saveConfig() {
     const config = {
         apiUrl: document.getElementById('api-url').value,
+        apiType: document.getElementById('api-type').value,
         apiKey: document.getElementById('api-key').value,
         model: document.getElementById('model-select').value,
         customModel: document.getElementById('custom-model-input').value,
@@ -1725,6 +1774,7 @@ function loadConfig() {
         const parsed = configStr ? JSON.parse(configStr) : {};
 
         document.getElementById('api-url').value = parsed.apiUrl || '';
+        document.getElementById('api-type').value = parsed.apiType || 'chat';
         document.getElementById('api-key').value = parsed.apiKey || '';
 
         if (parsed.versionCount) {
@@ -1813,8 +1863,8 @@ async function queryAvailableModels(isSilent = false) {
         // 更健壮的URL构建逻辑，支持跨域API
         try {
             const url = new URL(apiUrl);
-            // 移除路径中的 /chat/completions
-            let pathname = url.pathname.replace(/\/chat\/completions\/?$/, '');
+            // 移除路径中的 /chat/completions 或 /responses
+            let pathname = url.pathname.replace(/\/(chat\/completions|responses)\/?$/, '');
             // 确保路径以 /models 结尾
             if (!pathname.endsWith('/models')) {
                 pathname = pathname.replace(/\/$/, '') + '/models';
@@ -1822,7 +1872,7 @@ async function queryAvailableModels(isSilent = false) {
             modelsApiUrl = url.origin + pathname;
         } catch (urlError) {
             // 如果URL解析失败，回退到字符串替换
-            modelsApiUrl = apiUrl.replace(/\/chat\/completions$/, '/models');
+            modelsApiUrl = apiUrl.replace(/\/(chat\/completions|responses)$/, '/models');
             if (!modelsApiUrl.endsWith('/models')) {
                 const baseUrlMatch = apiUrl.match(/^(https?:\/\/[^\/]+(?:\/[^\/]+)*?\/v\d+)/);
                 if (baseUrlMatch) {
@@ -1896,6 +1946,8 @@ async function generateWithAI() {
     if (modelSelect.value === 'custom' && !model) { alert(T('js_alert_no_custom_model')); return; }
     if (!apiUrl || !apiKey) { alert(T('js_alert_no_api_config')); openSettingsModal(); return; }
 
+    const apiType = getApiType();
+
     const loadingOverlay = document.getElementById('loading-overlay');
     const statusMessage = document.getElementById('status-message');
     const timerDisplay = document.getElementById('timer-display');
@@ -1919,12 +1971,7 @@ async function generateWithAI() {
                 fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify({
-                        model: model,
-                        messages: [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }],
-                        max_tokens: 2000,
-                        temperature: 0.6 + i * 0.15
-                    })
+                    body: JSON.stringify(buildRequestBody(apiType, model, content, 0.6 + i * 0.15))
                 })
             );
         }
@@ -1938,7 +1985,7 @@ async function generateWithAI() {
                  if (response.ok) {
                     try {
                         const data = await response.json();
-                        const markdownContent = data.choices?.[0]?.message?.content;
+                        const markdownContent = parseApiResponse(apiType, data);
                         if (markdownContent) {
                             const { root } = transformer.transform(markdownContent.trim());
                             aiResults.push({ markdown: markdownContent.trim(), root: root });
