@@ -2353,7 +2353,8 @@ function getMindmapCssRules() {
     return cssText;
 }
 
-function createExportableSvg(svgElement) {
+async function createExportableSvg(svgElement) {
+    await document.fonts.ready;
     const mainGroup = svgElement.querySelector('g');
     if (!mainGroup) return null;
 
@@ -2361,12 +2362,52 @@ function createExportableSvg(svgElement) {
     if (bbox.width === 0 || bbox.height === 0) return null;
     
     const svgClone = svgElement.cloneNode(true);
+
+    // 图片中的 SVG 不继承页面样式，固定文字排版，避免字体回退后换行或裁字。
+    const textProperties = ['font-family', 'font-size', 'font-weight', 'font-style',
+        'line-height', 'letter-spacing', 'word-spacing', 'white-space', 'word-break',
+        'overflow-wrap', 'text-align', 'text-decoration', 'color',
+        'margin', 'padding', 'box-sizing'];
+    const originals = svgElement.querySelectorAll('foreignObject');
+    const copies = svgClone.querySelectorAll('foreignObject');
+    const inverse = mainGroup.getScreenCTM().inverse();
+    let left = bbox.x, top = bbox.y;
+    let right = bbox.x + bbox.width, bottom = bbox.y + bbox.height;
+    originals.forEach((original, index) => {
+        const copy = copies[index];
+        // 行高可能小于中文字形或 emoji 的绘制高度，不能按容器尺寸裁切。
+        copy.style.overflow = 'visible';
+        const elements = original.querySelectorAll('*');
+        const clonedElements = copy.querySelectorAll('*');
+        elements.forEach((element, childIndex) => {
+            const computed = getComputedStyle(element);
+            const cloned = clonedElements[childIndex];
+            textProperties.forEach(property => cloned.style.setProperty(property, computed.getPropertyValue(property)));
+            // 固定原有内容宽度，保留多行布局，不因导出容器变化重新换行。
+            cloned.style.width = computed.width;
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            for (const rect of range.getClientRects()) {
+                for (const [x, y] of [[rect.left, rect.top], [rect.right, rect.bottom]]) {
+                    const point = new DOMPoint(x, y).matrixTransform(inverse);
+                    left = Math.min(left, point.x);
+                    top = Math.min(top, point.y);
+                    right = Math.max(right, point.x);
+                    bottom = Math.max(bottom, point.y);
+                }
+            }
+        });
+    });
+    // 给抗锯齿和边缘描边留出空间，避免整张图片的边界再次裁切文字。
+    const padding = 2;
+    const width = right - left + padding * 2;
+    const height = bottom - top + padding * 2;
     
     svgClone.removeAttribute('style');
     
-    svgClone.setAttribute('width', bbox.width);
-    svgClone.setAttribute('height', bbox.height);
-    svgClone.setAttribute('viewBox', `${bbox.x} ${bbox.y} ${bbox.width} ${bbox.height}`);
+    svgClone.setAttribute('width', width);
+    svgClone.setAttribute('height', height);
+    svgClone.setAttribute('viewBox', `${left - padding} ${top - padding} ${width} ${height}`);
     
     const groupInClone = svgClone.querySelector('g');
     if(groupInClone) {
@@ -2382,7 +2423,7 @@ function createExportableSvg(svgElement) {
 
     svgString = svgString.replace(/(\w+)?:?xlink=/g, 'xmlns:xlink=').replace(/NS\d+:href/g, 'xlink:href');
 
-    return { svgString, width: bbox.width, height: bbox.height };
+    return { svgString, width, height };
 }
 
 function downloadBlob(blob, fileName) {
@@ -2439,7 +2480,7 @@ async function exportSVG() {
 
     try {
         await mm.fit();
-        const svgData = createExportableSvg(mindmapSVG);
+        const svgData = await createExportableSvg(mindmapSVG);
 
         if (!svgData) {
             throw new Error(T('js_alert_no_mindmap'));
@@ -2473,7 +2514,7 @@ async function exportPNG() {
 
     try {
         await mm.fit();
-        const svgData = createExportableSvg(mindmapSVG);
+        const svgData = await createExportableSvg(mindmapSVG);
         
         if (!svgData) {
             throw new Error(T('js_alert_no_mindmap'));
@@ -3082,7 +3123,7 @@ async function exportLandscapeSVG() {
     }
 
     try {
-        const svgData = createExportableSvg(landscapeSvg);
+        const svgData = await createExportableSvg(landscapeSvg);
         if (!svgData) {
             throw new Error(T('js_alert_no_mindmap'));
         }
@@ -3104,7 +3145,7 @@ async function exportLandscapePNG() {
     }
 
     try {
-        const svgData = createExportableSvg(landscapeSvg);
+        const svgData = await createExportableSvg(landscapeSvg);
         if (!svgData) {
             throw new Error(T('js_alert_no_mindmap'));
         }
