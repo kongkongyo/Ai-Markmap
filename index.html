@@ -990,6 +990,11 @@
                     <button type="button" id="toggle-api-key-visibility" class="visibility-toggle-btn" data-t-title="toggleVisibilityTitle">👁️</button>
                 </div>
             </div>
+            <div class="config-row">
+                <label for="max-output-tokens" class="config-label" data-t="maxOutputTokensLabel"></label>
+                <input type="number" id="max-output-tokens" class="config-input" min="1" step="1" data-t-placeholder="maxOutputTokensPlaceholder" aria-describedby="max-output-tokens-tip" />
+            </div>
+            <div id="max-output-tokens-tip" class="prompt-tip" data-t="maxOutputTokensTip"></div>
             <div class="button-row">
                 <button class="control-btn ai-btn" onclick="saveAndCloseSettings()" data-t="saveAndCloseBtn"></button>
             </div>
@@ -1077,6 +1082,9 @@ const translations = {
         'apiUrlLabel': 'API地址:',
         'apiTypeLabel': 'API类型:',
         'apiKeyLabel': 'API秘钥:',
+        'maxOutputTokensLabel': '输出上限:',
+        'maxOutputTokensPlaceholder': '自动（模型默认）',
+        'maxOutputTokensTip': '留空使用模型默认额度。需要控制用量时填写正整数（tokens），不要超过模型支持的上限；思考过程也可能占用额度。',
         'saveAndCloseBtn': '💾 保存并关闭',
         'promptSettingsTitle': '📝 Prompt 设置',
         'promptTip': '请确保在Prompt模板中包含 <code>{{CONTENT}}</code>，它将被替换为左侧的输入内容。',
@@ -1156,6 +1164,14 @@ const translations = {
         'js_alert_no_api_config': '请先点击右上角“API设置”配置API地址和密钥！',
         'js_alert_no_custom_model': '请在自定义输入框中填写模型名称！',
         'js_alert_all_failed': '所有AI生成请求均失败或返回空内容。请检查API设置和网络。',
+        'js_api_empty': 'API 未返回正文，请检查所选模型是否支持文本生成。',
+        'js_api_incomplete': (reason) => `生成未完成：${reason}。`,
+        'js_api_output_limit': '已达到输出长度上限，但模型尚未返回正文。请在 API 设置中调整输出上限，或将原文分段后重试。',
+        'js_api_partial': '已保留生成的内容，但部分版本因达到输出长度上限而尚未完成，已在版本标签中标注。可在 API 设置中调整输出上限，或将原文分段生成。',
+        'js_api_invalid_output_limit': '输出上限必须是正整数，或留空使用模型默认额度。',
+        'js_tab_incomplete': '（未完成）',
+        'js_api_refusal': (reason) => `模型拒绝生成：${reason}`,
+        'js_api_invalid_json': 'API 返回的不是有效 JSON，请检查 API 地址和接口类型。',
         'js_alert_gen_failed': (msg) => `AI生成失败: ${msg}`,
         'js_alert_no_clipboard': '您的浏览器不支持剪贴板 API，请手动粘贴内容。',
         'js_alert_clipboard_empty': '剪贴板内容为空。',
@@ -1274,6 +1290,9 @@ const translations = {
         'apiUrlLabel': 'API URL:',
         'apiTypeLabel': 'API Type:',
         'apiKeyLabel': 'API Key:',
+        'maxOutputTokensLabel': 'Output limit:',
+        'maxOutputTokensPlaceholder': 'Auto (model default)',
+        'maxOutputTokensTip': 'Leave empty to use the model default. To control usage, enter a positive token limit within the model’s supported range. Reasoning may also use this budget.',
         'saveAndCloseBtn': '💾 Save & Close',
         'promptSettingsTitle': '📝 Prompt Settings',
         'promptTip': 'Please make sure to include <code>{{CONTENT}}</code> in the prompt template, which will be replaced with the input content from the left.',
@@ -1353,6 +1372,14 @@ const translations = {
         'js_alert_no_api_config': 'Please configure API URL and Key in "API Settings" first!',
         'js_alert_no_custom_model': 'Please enter a model name in the custom input field!',
         'js_alert_all_failed': 'All AI generation requests failed or returned empty content. Please check API settings and network.',
+        'js_api_empty': 'The API returned no text. Check that the selected model supports text generation.',
+        'js_api_incomplete': (reason) => `Generation incomplete: ${reason}.`,
+        'js_api_output_limit': 'The output limit was reached before the model returned any text. Adjust the output limit in API Settings or split the source into smaller sections and retry.',
+        'js_api_partial': 'Generated text has been preserved, but some versions reached the output limit and are marked incomplete in their tabs. Adjust the output limit in API Settings or generate smaller sections.',
+        'js_api_invalid_output_limit': 'The output limit must be a positive integer, or empty to use the model default.',
+        'js_tab_incomplete': ' (incomplete)',
+        'js_api_refusal': (reason) => `The model refused to generate: ${reason}`,
+        'js_api_invalid_json': 'The API did not return valid JSON. Check the API URL and API type.',
         'js_alert_gen_failed': (msg) => `AI generation failed: ${msg}`,
         'js_alert_no_clipboard': "Your browser does not support the Clipboard API. Please paste the content manually.",
         'js_alert_clipboard_empty': 'Clipboard is empty.',
@@ -1533,6 +1560,12 @@ function getNodeColor(node) {
 function openSettingsModal() { settingsModal.classList.remove('hidden'); }
 function closeSettingsModal() { settingsModal.classList.add('hidden'); }
 function saveAndCloseSettings() {
+    try {
+        getOutputTokenLimit();
+    } catch (error) {
+        alert(error.message);
+        return;
+    }
     autoCompleteApiUrl();
     saveConfig();
     closeSettingsModal();
@@ -1613,7 +1646,7 @@ async function init() {
         document.getElementById('api-url').addEventListener('blur', autoCompleteApiUrl);
         
         document.getElementById('model-select').addEventListener('change', handleModelChange);
-        ['api-url', 'api-key', 'model-select', 'custom-model-input'].forEach(id => {
+        ['api-url', 'api-key', 'model-select', 'custom-model-input', 'max-output-tokens'].forEach(id => {
             document.getElementById(id).addEventListener('input', saveConfig);
         });
 
@@ -1712,7 +1745,7 @@ function autoCompleteApiUrl() {
     const input = document.getElementById('api-url');
     const apiType = document.getElementById('api-type').value;
     const suffix = apiType === 'responses' ? '/responses' : '/chat/completions';
-    let url = input.value.trim();
+    let url = input.value.trim().replace(/\/+$/, '');
     if (!url) { return; }
     // 已包含后缀的，直接替换
     if (url.includes('/chat/completions') || url.includes('/responses')) {
@@ -1732,28 +1765,116 @@ function getApiType() {
     return document.getElementById('api-type').value;
 }
 
-function buildRequestBody(apiType, model, content, temperature) {
-    if (apiType === 'responses') {
-        return {
-            model: model,
-            input: [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }],
-            max_output_tokens: 2000,
-            temperature: temperature
-        };
+function getOutputTokenLimit() {
+    const input = document.getElementById('max-output-tokens');
+    const value = input.value.trim();
+    if (input.validity?.badInput) { throw new Error(T('js_api_invalid_output_limit')); }
+    if (!value) { return null; }
+    const limit = Number(value);
+    if (!Number.isSafeInteger(limit) || limit < 1) {
+        throw new Error(T('js_api_invalid_output_limit'));
     }
-    return {
-        model: model,
-        messages: [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }],
-        max_tokens: 2000,
-        temperature: temperature
+    return limit;
+}
+
+function buildRequestBody(apiType, model, content, maxOutputTokens = null) {
+    const messages = [{ role: 'user', content: AI_PROMPT_TEMPLATE.replace('{{CONTENT}}', content) }];
+    const body = apiType === 'responses' ? { model: model, input: messages } : { model: model, messages: messages };
+    if (maxOutputTokens !== null) {
+        body[apiType === 'responses' ? 'max_output_tokens' : 'max_completion_tokens'] = maxOutputTokens;
+    }
+    return body;
+}
+
+async function requestApiResponse(apiUrl, apiKey, apiType, body) {
+    const options = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }
     };
+    const response = await fetch(apiUrl, { ...options, body: JSON.stringify(body) });
+    if (apiType !== 'chat' || ![400, 422].includes(response.status) || !('max_completion_tokens' in body)) {
+        return response;
+    }
+    let data;
+    try {
+        data = await response.clone().json();
+    } catch {
+        return response;
+    }
+    const error = data?.error;
+    const message = String(error?.message || '');
+    const identifiesParameter = error?.param === 'max_completion_tokens' || message.includes('max_completion_tokens');
+    const unsupported = !['unsupported_value', 'invalid_value'].includes(error?.code) && !/\bvalue\b|数值/i.test(message) &&
+        (['unsupported_parameter', 'unknown_parameter'].includes(error?.code) ||
+        /(?:unsupported|unknown|unrecognized|unexpected)\s+(?:request\s+)?(?:parameter|argument|field)|not supported|不支持/i.test(message));
+    if (!identifiesParameter || !unsupported) { return response; }
+    const { max_completion_tokens: limit, ...compatibleBody } = body;
+    compatibleBody.max_tokens = limit;
+    console.info('API参数兼容重试:', {
+        apiType: apiType, model: redactApiError(body.model, apiKey),
+        from: 'max_completion_tokens', to: 'max_tokens'
+    });
+    return fetch(apiUrl, { ...options, body: JSON.stringify(compatibleBody) });
 }
 
 function parseApiResponse(apiType, data) {
-    if (apiType === 'responses') {
-        return data.output?.[0]?.content?.[0]?.text;
+    if (data?.error) {
+        throw new Error(data.error.message || data.error.code || T('js_api_empty'));
     }
-    return data.choices?.[0]?.message?.content;
+    if (apiType === 'responses') {
+        if (data?.status === 'failed' || (data?.status === 'incomplete' &&
+                data.incomplete_details?.reason !== 'max_output_tokens')) {
+            throw new Error(T('js_api_incomplete', data.incomplete_details?.reason || data.status));
+        }
+        const parts = (data?.output || []).filter(item => item.type === 'message')
+            .flatMap(item => item.content || []);
+        const text = parts.filter(part => part.type === 'output_text' && typeof part.text === 'string')
+            .map(part => part.text).join('\n').trim();
+        if (text) { return text; }
+        const refusal = parts.find(part => part.type === 'refusal');
+        if (refusal) { throw new Error(T('js_api_refusal', refusal.refusal)); }
+        if (data?.incomplete_details?.reason === 'max_output_tokens') {
+            throw new Error(T('js_api_output_limit'));
+        }
+    } else {
+        const choice = data?.choices?.[0];
+        if (choice?.finish_reason === 'content_filter') {
+            throw new Error(T('js_api_incomplete', choice.finish_reason));
+        }
+        const message = choice?.message;
+        if (message?.refusal) { throw new Error(T('js_api_refusal', message.refusal)); }
+        const text = typeof message?.content === 'string' ? message.content :
+            (Array.isArray(message?.content) ? message.content.filter(part => part.type === 'text')
+                .map(part => part.text || '').join('\n') : '');
+        if (text.trim()) { return text.trim(); }
+        if (choice?.finish_reason === 'length') { throw new Error(T('js_api_output_limit')); }
+    }
+    throw new Error(T('js_api_empty'));
+}
+
+async function readApiResponse(apiType, response, onIncomplete) {
+    let data;
+    try {
+        data = await response.json();
+    } catch {
+        throw new Error(`HTTP ${response.status}: ${T('js_api_invalid_json')}`);
+    }
+    if (!response.ok) {
+        const message = data?.error?.message || data?.error?.code || response.statusText;
+        throw new Error(`HTTP ${response.status}: ${message}`);
+    }
+    const text = parseApiResponse(apiType, data);
+    const incomplete = apiType === 'responses' ?
+        data.status === 'incomplete' && data.incomplete_details?.reason === 'max_output_tokens' :
+        data.choices?.[0]?.finish_reason === 'length';
+    if (incomplete && onIncomplete) { onIncomplete(); }
+    return text;
+}
+
+function redactApiError(message, apiKey) {
+    let text = String(message);
+    if (apiKey) { text = text.split(apiKey).join('[REDACTED]'); }
+    return text.replace(/\bsk-[A-Za-z0-9_-]+/g, '[REDACTED]');
 }
 
 function saveConfig() {
@@ -1764,6 +1885,7 @@ function saveConfig() {
         model: document.getElementById('model-select').value,
         customModel: document.getElementById('custom-model-input').value,
         versionCount: document.getElementById('version-slider').value,
+        maxOutputTokens: document.getElementById('max-output-tokens').value.trim(),
     };
     localStorage.setItem('ai-mindmap-config', JSON.stringify(config));
 }
@@ -1776,6 +1898,7 @@ function loadConfig() {
         document.getElementById('api-url').value = parsed.apiUrl || '';
         document.getElementById('api-type').value = parsed.apiType || 'chat';
         document.getElementById('api-key').value = parsed.apiKey || '';
+        document.getElementById('max-output-tokens').value = parsed.maxOutputTokens ?? '';
 
         if (parsed.versionCount) {
             document.getElementById('version-slider').value = parsed.versionCount;
@@ -1938,6 +2061,7 @@ async function generateWithAI() {
     const content = topicInput.value.trim();
     if (!content) { alert(T('js_alert_no_content')); return; }
 
+    autoCompleteApiUrl();
     const apiUrl = document.getElementById('api-url').value.trim();
     const apiKey = document.getElementById('api-key').value.trim();
     const modelSelect = document.getElementById('model-select');
@@ -1946,6 +2070,13 @@ async function generateWithAI() {
     if (modelSelect.value === 'custom' && !model) { alert(T('js_alert_no_custom_model')); return; }
     if (!apiUrl || !apiKey) { alert(T('js_alert_no_api_config')); openSettingsModal(); return; }
 
+    let maxOutputTokens;
+    try {
+        maxOutputTokens = getOutputTokenLimit();
+    } catch (error) {
+        alert(error.message);
+        return;
+    }
     const apiType = getApiType();
 
     const loadingOverlay = document.getElementById('loading-overlay');
@@ -1964,38 +2095,34 @@ async function generateWithAI() {
     clearAiResults();
 
     try {
+        const requestStartedAt = Date.now();
         const fetchPromises = [];
         const numVersions = parseInt(versionSlider.value, 10);
         for (let i = 0; i < numVersions; i++) {
             fetchPromises.push(
-                fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-                    body: JSON.stringify(buildRequestBody(apiType, model, content, 0.6 + i * 0.15))
-                })
+                requestApiResponse(apiUrl, apiKey, apiType, buildRequestBody(apiType, model, content, maxOutputTokens))
             );
         }
 
         const responses = await Promise.allSettled(fetchPromises);
         let successfulResults = 0;
+        const errors = [];
 
-        for (const result of responses) {
-            if (result.status === 'fulfilled') {
-                const response = result.value;
-                 if (response.ok) {
-                    try {
-                        const data = await response.json();
-                        const markdownContent = parseApiResponse(apiType, data);
-                        if (markdownContent) {
-                            const { root } = transformer.transform(markdownContent.trim());
-                            aiResults.push({ markdown: markdownContent.trim(), root: root });
-                            successfulResults++;
-                            statusMessage.textContent = T('js_status_generated', successfulResults, numVersions);
-                        }
-                    } catch (e) { console.error('解析AI响应失败:', e); }
-                }
-            } else {
-                console.error('一个AI请求失败:', result.reason);
+        for (const [index, result] of responses.entries()) {
+            const context = { model: redactApiError(model, apiKey), apiType: apiType, version: index + 1 };
+            try {
+                if (result.status === 'rejected') { throw result.reason; }
+                let incomplete = false;
+                const markdownContent = await readApiResponse(apiType, result.value, () => { incomplete = true; });
+                const { root } = transformer.transform(markdownContent);
+                aiResults.push({ markdown: markdownContent, root: root, incomplete: incomplete });
+                successfulResults++;
+                statusMessage.textContent = T('js_status_generated', successfulResults, numVersions);
+                console.info('AI请求成功:', { ...context, durationMs: Date.now() - requestStartedAt, incomplete: incomplete });
+            } catch (error) {
+                const message = redactApiError(error?.message || error, apiKey);
+                errors.push(message);
+                console.error('AI请求失败:', { ...context, durationMs: Date.now() - requestStartedAt, message: message });
             }
         }
         
@@ -2011,14 +2138,19 @@ async function generateWithAI() {
                 switchMobilePanel('mindmap');
             }
 
-            setTimeout(() => { loadingOverlay.style.display = 'none'; }, 1000);
+            const hasIncompleteResults = aiResults.some(result => result.incomplete);
+            setTimeout(() => {
+                loadingOverlay.style.display = 'none';
+                if (hasIncompleteResults) { alert(T('js_api_partial')); }
+            }, 1000);
         } else {
-            throw new Error(T('js_alert_all_failed'));
+            throw new Error([...new Set(errors)].join('\n') || T('js_alert_all_failed'));
         }
 
     } catch (error) {
-        console.error('AI生成失败:', error);
-        alert(T('js_alert_gen_failed', error.message));
+        const message = redactApiError(error?.message || error, apiKey);
+        console.error('AI生成失败:', message);
+        alert(T('js_alert_gen_failed', message));
         loadingOverlay.style.display = 'none';
         updateMarkmap(currentMarkdown);
     } finally {
@@ -2099,11 +2231,11 @@ function clearAiResults() {
 function renderResultTabs() {
     const tabsContainer = document.getElementById('results-tabs');
     tabsContainer.innerHTML = '';
-    if (aiResults.length > 1) {
-        aiResults.forEach((_, index) => {
+    if (aiResults.length > 1 || aiResults.some(result => result.incomplete)) {
+        aiResults.forEach((result, index) => {
             const tab = document.createElement('button');
             tab.className = 'result-tab-btn';
-            tab.textContent = T('js_tab_version', index);
+            tab.textContent = T('js_tab_version', index) + (result.incomplete ? T('js_tab_incomplete') : '');
             tab.dataset.index = index;
             tab.onclick = () => switchToResult(index);
             tabsContainer.appendChild(tab);
@@ -2830,11 +2962,11 @@ function renderLandscapeTabs() {
     const tabsContainer = document.getElementById('landscape-tabs');
     tabsContainer.innerHTML = '';
 
-    if (aiResults.length > 1) {
-        aiResults.forEach((_, index) => {
+    if (aiResults.length > 1 || aiResults.some(result => result.incomplete)) {
+        aiResults.forEach((result, index) => {
             const tab = document.createElement('button');
             tab.className = 'landscape-tab-btn' + (index === activeResultIndex ? ' active' : '');
-            tab.textContent = T('js_tab_version', index);
+            tab.textContent = T('js_tab_version', index) + (result.incomplete ? T('js_tab_incomplete') : '');
             tab.dataset.index = index;
             tab.onclick = () => switchLandscapeVersion(index);
             tabsContainer.appendChild(tab);

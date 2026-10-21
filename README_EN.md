@@ -63,6 +63,9 @@
 ## 🔧 Configuration Details
 
 ### API Settings
+
+- **Output limit**: Leave empty to use the provider's default, without model-name-based limits. Enter a positive token count to control usage within the model's supported range; reasoning may share this budget. Existing configurations default to automatic.
+- **Compatibility and truncation**: When an explicit limit is set and a Chat endpoint explicitly rejects the token parameter name, the app retries once using the legacy name with the same limit. Authentication, balance, network and invalid-limit errors are not retried. Truncated text is preserved and marked incomplete; it is not automatically continued.
 - **API URL**: Must be a URL compatible with the OpenAI `chat/completions` interface. The tool will automatically handle the trailing path.
     > **Tip**: If you don't have an API key yet, you can visit **[SiliconFlow](https://cloud.siliconflow.cn/i/9afjLTa)** to register—they provide some free AI models for users.
 - **API Key**: Your service credentials. Click the `👁️` icon next to it to toggle key visibility.
